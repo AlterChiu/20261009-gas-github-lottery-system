@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活動幸運抽獎系統 | Lucky Draw System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 頂部標題與 API 設定列 -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon">🎉</span>
+        <h1>活動幸運抽獎系統</h1>
+      </div>
+      <div class="header-controls">
+        <button id="btn-toggle-config" class="btn-secondary" title="設定 Google Apps Script API 網址">⚙️ 設定 API</button>
+        <button id="btn-load-demo" class="btn-outline" title="載入展示範例資料進行測試">📊 載入展示資料</button>
+      </div>
+    </header>
+
+    <!-- API 設定面板 (預設可折疊或彈出) -->
+    <section id="config-panel" class="config-panel hidden">
+      <div class="config-content">
+        <div class="input-group">
+          <label for="gas-api-url">Google Apps Script Web App URL：</label>
+          <input type="url" id="gas-api-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+        </div>
+        <div class="config-actions">
+          <button id="btn-fetch-data" class="btn-primary">連線載入資料</button>
+          <button id="btn-close-config" class="btn-secondary">關閉</button>
+        </div>
+      </div>
+      <div id="api-status-message" class="status-message"></div>
+    </section>
+
+    <!-- 主要內容工作區 -->
+    <main class="main-content">
+      <!-- 左側/中央：獎品看板與抽獎舞台 -->
+      <section class="stage-section">
+        <!-- 獎品資訊看板 -->
+        <div class="card prize-card">
+          <div class="prize-selector-row">
+            <label for="prize-select" class="selector-label">目前抽獎項目：</label>
+            <select id="prize-select" class="prize-select">
+              <option value="">載入中或請先連線...</option>
+            </select>
+          </div>
+
+          <div class="prize-stats-grid">
+            <div class="stat-box">
+              <span class="stat-label">獎品總數</span>
+              <span id="stat-total-quota" class="stat-value">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">已抽出</span>
+              <span id="stat-drawn-count" class="stat-value text-accent">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">剩餘名額</span>
+              <span id="stat-remaining-quota" class="stat-value text-highlight">0</span>
+            </div>
+          </div>
+          <div id="prize-desc" class="prize-description"></div>
+        </div>
+
+        <!-- 抽獎主舞台 -->
+        <div class="card lottery-stage">
+          <div id="rolling-display" class="rolling-display">
+            <div class="stage-placeholder">準備抽獎</div>
+            <div class="winner-candidate-name">---</div>
+            <div class="winner-candidate-meta"></div>
+          </div>
+
+          <div class="stage-controls">
+            <button id="btn-draw" class="btn-draw" disabled>開始抽獎</button>
+          </div>
+          <div id="draw-warning" class="draw-warning"></div>
+        </div>
+      </section>
+
+      <!-- 右側：中獎名單與操作 -->
+      <section class="winners-section">
+        <div class="card winners-card">
+          <div class="winners-header">
+            <h2>🏆 中獎名單</h2>
+            <div class="winners-actions">
+              <button id="btn-export-csv" class="btn-sm btn-outline">匯出 CSV</button>
+              <button id="btn-reset-lottery" class="btn-sm btn-danger">重置紀錄</button>
+            </div>
+          </div>
+
+          <!-- 中獎記錄分組列表 -->
+          <div id="winners-list-container" class="winners-list-container">
+            <div class="empty-hint">尚無中獎紀錄</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
