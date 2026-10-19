@@ -491,6 +491,7 @@
 
   /**
    * 渲染右側中獎分組名冊
+   * 注意：畫面上僅顯示遮罩後的資訊（不在 DOM 屬性或全域物件中暴露原始個資）
    */
   function renderWinnersList() {
     dom.winnersListContainer.innerHTML = '';
@@ -518,7 +519,7 @@
 
       const titleEl = document.createElement('div');
       titleEl.className = 'group-title';
-      titleEl.innerHTML = `<span>${group.prizeName}</span><span>(${group.items.length} 位)</span>`;
+      titleEl.innerHTML = `<span>${escapeHtml(group.prizeName)}</span><span>(${group.items.length} 位)</span>`;
       groupEl.appendChild(titleEl);
 
       const listEl = document.createElement('div');
@@ -527,19 +528,32 @@
       group.items.forEach(item => {
         const itemEl = document.createElement('div');
         itemEl.className = 'winner-item';
-        // 【修改處 3】右側中獎列表套用姓名與學號隱私遮罩
+        // 【修改處 3】右側中獎列表套用姓名與學號隱私遮罩，並用安全 DOM 操作，不使用 innerHTML 插入未遮罩資料
+        const leftDiv = document.createElement('div');
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'winner-item-name';
+        nameDiv.textContent = maskName(item.name);
+        leftDiv.appendChild(nameDiv);
+
         const metaParts = [
           item.department,
           item.grade,
           item.winnerId ? '#' + maskStudentId(item.winnerId) : ''
         ].filter(Boolean).join(' · ');
-        itemEl.innerHTML = `
-          <div>
-            <div class="winner-item-name">${maskName(item.name)}</div>
-            <div class="winner-item-meta">${metaParts}</div>
-          </div>
-          <div class="winner-item-time">${item.timestamp}</div>
-        `;
+
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'winner-item-meta';
+        metaDiv.textContent = metaParts;
+        leftDiv.appendChild(metaDiv);
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'winner-item-time';
+        timeDiv.textContent = item.timestamp;
+
+        itemEl.appendChild(leftDiv);
+        itemEl.appendChild(timeDiv);
+
         listEl.appendChild(itemEl);
       });
 
@@ -557,6 +571,10 @@
       return;
     }
 
+    // 在使用者匯出前再做一次確認（提醒含完整個資）
+    const proceed = confirm('匯出將包含完整個人資料（姓名、學號、電子郵件）。請在安全環境下載並妥善處理，是否繼續？');
+    if (!proceed) return;
+
     const headers = ['獎品名稱', '得獎學生姓名', '系所', '年級', '學號', '電子郵件', '中獎時間'];
     const rows = state.winners.map(w => [
       `"${(w.prizeName || '').replace(/"/g, '""')}"`,
@@ -565,61 +583,4 @@
       `"${(w.grade || '').replace(/"/g, '""')}"`,
       `"${(w.winnerId || '').replace(/"/g, '""')}"`,
       `"${(w.email || '').replace(/"/g, '""')}"`,
-      `"${w.timestamp}"`
-    ]);
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `中獎名冊_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  /**
-   * 重置抽獎紀錄
-   */
-  function handleResetLottery() {
-    if (state.winners.length === 0) {
-      alert('目前無中獎紀錄。');
-      return;
-    }
-
-    const confirmed = confirm('確定要清除所有中獎紀錄嗎？此動作將重新計算所有獎項剩餘配額。');
-    if (confirmed) {
-      state.winners = [];
-      localStorage.removeItem(STORAGE_KEYS.WINNERS);
-      dom.winnerCandidateName.textContent = '---';
-      dom.winnerCandidateMeta.textContent = '';
-      dom.stagePlaceholder.textContent = '準備抽獎';
-      dom.rollingDisplay.classList.remove('winner-won', 'rolling');
-
-      renderPrizeOptions();
-      updateStageAndStats();
-      renderWinnersList();
-      alert('已成功重置中獎紀錄！');
-    }
-  }
-
-  // 暴露全域給測試或除錯
-  window.__lotterySystem = {
-    state,
-    loadData,
-    getPrizeQuotaStats,
-    getEligibleParticipants,
-    exportWinnersToCsv,
-    maskName,
-    maskStudentId
-  };
-
-  // 網頁載入後啟動
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+      `"${w.timestamp}"
