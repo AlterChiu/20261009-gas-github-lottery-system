@@ -60,6 +60,33 @@
   let dom = {};
 
   /**
+   * 隱私遮罩工具：姓名 (例如：陳冠宇 -> 陳○宇、林潔 -> 林○)
+   */
+  function maskName(name) {
+    if (!name) return '';
+    const chars = Array.from(name.trim()); // 支援罕見字與 Unicode
+    if (chars.length <= 1) return name;
+    if (chars.length === 2) return chars[0] + '○';
+    return chars[0] + '○'.repeat(chars.length - 2) + chars[chars.length - 1];
+  }
+
+  /**
+   * 隱私遮罩工具：學號 (例如：B11902001 -> B119***01)
+   */
+  function maskStudentId(id) {
+    if (!id) return '';
+    const str = String(id).trim();
+    if (str.length >= 6) {
+      const maskLength = Math.max(1, str.length - 6);
+      return str.slice(0, 4) + '*'.repeat(maskLength) + str.slice(-2);
+    }
+    if (str.length > 2) {
+      return str[0] + '*'.repeat(str.length - 2) + str.slice(-1);
+    }
+    return str;
+  }
+
+  /**
    * 初始化入口
    */
   function init() {
@@ -381,8 +408,13 @@
     function rollTick() {
       const randomIndex = Math.floor(Math.random() * eligible.length);
       const tempPerson = eligible[randomIndex];
-      dom.winnerCandidateName.textContent = tempPerson.name;
-      const meta = [tempPerson.department, tempPerson.grade, tempPerson.id ? '#' + tempPerson.id : ''].filter(Boolean).join(' ');
+      // 【修改處 1】滾動時套用姓名與學號隱私遮罩
+      dom.winnerCandidateName.textContent = maskName(tempPerson.name);
+      const meta = [
+        tempPerson.department,
+        tempPerson.grade,
+        tempPerson.id ? '#' + maskStudentId(tempPerson.id) : ''
+      ].filter(Boolean).join(' ');
       dom.winnerCandidateMeta.textContent = meta;
 
       const elapsed = Date.now() - startTime;
@@ -413,15 +445,19 @@
 
     const winner = eligiblePool[finalIndex];
 
-    // 更新舞台定格視覺
+    // 更新舞台定格視覺（【修改處 2】定格畫面套用姓名與學號隱私遮罩）
     dom.rollingDisplay.classList.remove('rolling');
     dom.rollingDisplay.classList.add('winner-won');
     dom.stagePlaceholder.textContent = '恭喜中獎！';
-    dom.winnerCandidateName.textContent = winner.name;
-    const winnerMeta = [winner.department, winner.grade, winner.id ? '#' + winner.id : ''].filter(Boolean).join(' ');
+    dom.winnerCandidateName.textContent = maskName(winner.name);
+    const winnerMeta = [
+      winner.department,
+      winner.grade,
+      winner.id ? '#' + maskStudentId(winner.id) : ''
+    ].filter(Boolean).join(' ');
     dom.winnerCandidateMeta.textContent = winnerMeta;
 
-    // 記錄中獎者
+    // 記錄中獎者（保留完整原始資料，供 CSV 匯出使用）
     const winnerRecord = {
       winnerId: winner.id,
       name: winner.name,
@@ -491,10 +527,15 @@
       group.items.forEach(item => {
         const itemEl = document.createElement('div');
         itemEl.className = 'winner-item';
-        const metaParts = [item.department, item.grade, item.winnerId ? '#' + item.winnerId : ''].filter(Boolean).join(' · ');
+        // 【修改處 3】右側中獎列表套用姓名與學號隱私遮罩
+        const metaParts = [
+          item.department,
+          item.grade,
+          item.winnerId ? '#' + maskStudentId(item.winnerId) : ''
+        ].filter(Boolean).join(' · ');
         itemEl.innerHTML = `
           <div>
-            <div class="winner-item-name">${item.name}</div>
+            <div class="winner-item-name">${maskName(item.name)}</div>
             <div class="winner-item-meta">${metaParts}</div>
           </div>
           <div class="winner-item-time">${item.timestamp}</div>
@@ -508,7 +549,7 @@
   }
 
   /**
-   * 匯出中獎名單為 CSV 檔案
+   * 匯出中獎名單為 CSV 檔案 (保留完整原始個資，不套用遮罩)
    */
   function exportWinnersToCsv() {
     if (state.winners.length === 0) {
@@ -570,7 +611,9 @@
     loadData,
     getPrizeQuotaStats,
     getEligibleParticipants,
-    exportWinnersToCsv
+    exportWinnersToCsv,
+    maskName,
+    maskStudentId
   };
 
   // 網頁載入後啟動
